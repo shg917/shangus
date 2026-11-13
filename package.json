@@ -1,0 +1,21 @@
+{
+  "name": "fitcard-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test tests/core.test.mjs",
+    "test:db": "node tests/database.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "@supabase/supabase-js": "2.119.0"
+  }
+}

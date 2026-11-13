@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141613">
+  <meta name="description" content="운동 기록이 나만의 카드와 전투 능력치로. FitCard에서 성장을 확인하세요.">
+  <title>FITCARD — 기록이 힘이 되는 곳</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23d4fc52'/%3E%3Ctext x='8' y='25' font-size='26' font-family='sans-serif' font-weight='900'%3EF%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="header"><a class="brand" href="#record">FITCARD<span>기록이 힘이 되는 곳</span></a><div class="account" id="account"></div></header>
+  <nav class="navigation" aria-label="주요 메뉴"><a href="#record">01 기록 입력</a><a href="#card">02 나의 카드</a><a href="#battle">03 보스 도전</a><a href="#ranking">04 랭킹</a></nav>
+  <div id="mode" class="mode"></div>
+  <main id="app"></main>
+  <footer>FITCARD · 나의 어제보다 강하게 <span>자가 입력 기반 · 초기 밸런스 v1</span></footer>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="login-dialog"><form method="dialog"><button class="close" aria-label="닫기">×</button></form><p class="eyebrow">KEEP YOUR PROGRESS</p><h2>나의 성장을 저장하세요.</h2><p>카카오로 시작하면 카드, 보스 진행도와 업적이 계정에 저장됩니다.</p><button id="kakao-login" class="kakao">카카오로 시작하기</button><p class="muted" id="login-note"></p></dialog>
+</body></html>

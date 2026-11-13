@@ -1,0 +1,32 @@
+import {createRequire} from 'node:module';
+import {mkdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {homedir} from 'node:os';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url);
+let playwright;
+try { playwright=require(process.env.PLAYWRIGHT_PATH||'playwright'); }
+catch(error) { if(process.env.PLAYWRIGHT_PATH)throw error;playwright=require(path.join(homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')); }
+const {chromium}=playwright;
+const browser=await chromium.launch({executablePath:process.env.BROWSER_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--no-proxy-server']});
+await mkdir(new URL('../.qa/',import.meta.url),{recursive:true});
+const context=await browser.newContext({viewport:{width:1440,height:1100},deviceScaleFactor:1});
+const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+const screenshot=async name=>page.screenshot({path:fileURLToPath(new URL(`../.qa/${name}.png`,import.meta.url)),fullPage:true});
+try {
+ await page.goto(process.env.PREVIEW_URL||'http://127.0.0.1:4174');await page.waitForSelector('#record-form');await screenshot('record-desktop');
+ await page.click('#sample');await page.click('#record-form button[type=submit]');await page.waitForSelector('.fitness-card');assert.match(await page.textContent('.class-name'),/힘형/);await screenshot('card-desktop');
+ await page.selectOption('#template','receipt');assert.match(await page.textContent('.card-type'),/영수증/);await page.selectOption('#template','stat');
+ const download=page.waitForEvent('download');await page.click('#download-card');assert.match((await download).suggestedFilename(),/fitcard-stat.png/);
+ await page.click('#go-battle');await page.waitForSelector('#arena-canvas');await page.click('#attack');await page.waitForFunction(()=>document.querySelector('#attack')?.textContent.includes('HIT'));
+ const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('fitcard-app-v1')).player);await page.click('#attack');await page.waitForTimeout(1600);const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('fitcard-app-v1')).player);assert.ok(after.level>before.level);assert.ok(after.hp<before.hp);await screenshot('battle-desktop');
+ await page.click('[data-claim=login]');await page.waitForFunction(()=>document.querySelector('[data-claim=login]')?.textContent==='받음');
+ await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('fitcard-app-v1'));s.player.hp=0;s.player.status='dead';s.player.boss_hp=1;localStorage.setItem('fitcard-app-v1',JSON.stringify(s));});await page.reload();await page.waitForFunction(()=>document.querySelector('#attack')?.textContent.includes('부활권 1장'));await page.click('#attack');await page.waitForFunction(()=>document.querySelector('#attack')?.textContent.includes('HIT'));const revived=await page.evaluate(()=>JSON.parse(localStorage.getItem('fitcard-app-v1')).player);assert.equal(revived.boss_hp,1);assert.equal(revived.tickets,0);
+ await page.click('a[href="#ranking"]');await page.waitForSelector('.rank-table');assert.match(await page.textContent('.rank-table'),/나의 FitCard/);await page.click('[data-rank=month]');await page.waitForSelector('.rank-table');await page.click('[data-rank=week]');await page.waitForSelector('.rank-table');await screenshot('ranking-desktop');
+ await page.setViewportSize({width:390,height:844});await page.click('a[href="#record"]');await page.waitForSelector('#record-form');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('record-mobile');
+ await page.click('a[href="#battle"]');await page.waitForSelector('#arena-canvas');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('battle-mobile');
+ // Verify the locally vendored official SDK exports the expected client API.
+ await page.addScriptTag({url:(process.env.PREVIEW_URL||'http://127.0.0.1:4174')+'/vendor/supabase.js'});assert.equal(await page.evaluate(()=>typeof window.supabase.createClient),'function');
+ assert.deepEqual(errors,[]);console.log('Browser checks passed: record, 6-style selector, download, battle, persistent revival, 3 rankings, mobile layout, vendored SDK.');
+}finally{await browser.close();}

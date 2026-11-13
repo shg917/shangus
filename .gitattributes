@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.png binary
+*.webp binary
+# Preserve upstream SDK distribution bytes, including template-string whitespace.
+public/vendor/* -whitespace
