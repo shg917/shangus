@@ -15,4 +15,4 @@ additional_redirect_urls = ["http://127.0.0.1:4175/"]
 enable_signup = false
 
 [auth.email]
-enable_signup = false
+enabled = true

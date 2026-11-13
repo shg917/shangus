@@ -2,7 +2,7 @@ name: FitCard CI
 
 on:
   push:
-    branches: [main, V.1.0.0, 'feat/**', 'fix/**']
+    branches: [main, V.1.0.0]
   pull_request:
     branches: [main, V.1.0.0]
 
@@ -40,7 +40,7 @@ jobs:
       - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
         with:
           version: '3.1.0'
-      - run: supabase start
+      - run: supabase start > "$RUNNER_TEMP/supabase-start.txt"
       - name: Test the isolated Supabase stack
         run: |
           supabase status -o env > "$RUNNER_TEMP/supabase.env"
