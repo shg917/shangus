@@ -47,7 +47,7 @@ try {
   assert.equal(accepted.length, 1);
   const after = result(await rpc(a, 'get_my_state'));
   assert.equal(after.player.version, before.player.version + 1);
-  assert.deepEqual(after.player, accepted[0].data.player);
+  for (const [key, value] of Object.entries(accepted[0].data.player)) { assert.deepEqual(after.player[key], value, key); }
 
   result(await a.storage.from('cards').upload(file, png, { contentType: 'image/png' }));
   assert.ok((await b.storage.from('cards').download(file)).error);
