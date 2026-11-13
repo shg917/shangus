@@ -1,0 +1,67 @@
+name: FitCard CI
+
+on:
+  push:
+    branches: [main, V.1.0.0, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main, V.1.0.0]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: 1. Code and build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24.22.1'
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm run build
+      - run: pnpm audit --audit-level high
+
+  database:
+    name: 2. Database and permissions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24.22.1'
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:db
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
+        with:
+          version: '3.1.0'
+      - run: supabase start
+      - name: Test the isolated Supabase stack
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          node --env-file="$RUNNER_TEMP/supabase.env" tests/supabase-integration.mjs
+
+  browser:
+    name: 3. Browser
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24.22.1'
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run build
+      - name: Test the production build in demo mode
+        run: |
+          pnpm exec vite preview --host 127.0.0.1 --port 4175 --strictPort &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          curl --fail --silent --retry 15 --retry-connrefused http://127.0.0.1:4175/ > /dev/null
+          node tests/browser.mjs

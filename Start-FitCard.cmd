@@ -1,18 +1,14 @@
 @echo off
 cd /d "%~dp0"
-where node >nul 2>nul
+where pnpm >nul 2>nul
 if errorlevel 1 (
-  if exist "%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" (
-    set "FITCARD_NODE=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
-  ) else (
-    echo Node.js 20 or newer is required. Install Node.js, then try again.
-    pause
-    exit /b 1
-  )
-) else (
-  set "FITCARD_NODE=node"
+  echo Install Node.js 24 and pnpm 11.25.0 before running FitCard.
+  pause
+  exit /b 1
 )
-echo Open http://127.0.0.1:4173 in your browser.
-echo Press Ctrl+C to stop the local server.
-"%FITCARD_NODE%" scripts\serve.mjs
+if not exist node_modules\.bin\vite.cmd (
+  call pnpm install --frozen-lockfile
+  if errorlevel 1 exit /b 1
+)
+call pnpm dev --port 4175 --strictPort
 pause

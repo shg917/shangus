@@ -1,7 +1,7 @@
 import {PGlite} from '@electric-sql/pglite';
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
-import {calculate,hpAt,periods,SAMPLE} from '../public/core.js';
+import {calculate,hpAt,periods,SAMPLE} from '../frontend/src/lib/core.js';
 import {fixtures} from './fixtures.mjs';
 const db=new PGlite(), uid='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222';
 let assertions=0;const check=(label)=>{assertions++;console.log('PASS '+label);};
@@ -11,8 +11,9 @@ const as=async(id)=>{await db.exec('reset role');await q("select set_config('req
 const admin=async(sql,args=[])=>{await db.exec('reset role');return q(sql,args);};
 try {
  await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated; create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text); alter table storage.objects enable row level security; grant usage on schema storage to authenticated; grant select,insert,delete on storage.objects to authenticated; create function storage.foldername(text) returns text[] language sql immutable as $$select string_to_array($1,'/')$$;`);
- await db.exec(await readFile(new URL('../supabase/001_initial.sql',import.meta.url),'utf8'));check('001 migration executes on PostgreSQL');
- await db.exec(await readFile(new URL('../supabase/002_storage.sql',import.meta.url),'utf8'));check('002 private storage policies execute');
+ await db.exec(await readFile(new URL('../supabase/migrations/20261113120233_fitcard_initial_schema.sql',import.meta.url),'utf8'));check('001 migration executes on PostgreSQL');
+ await db.exec(await readFile(new URL('../supabase/migrations/20261113120243_fitcard_private_storage.sql',import.meta.url),'utf8'));check('002 private storage policies execute');
+ await db.exec(await readFile(new URL('../supabase/migrations/20261113120436_fitcard_foreign_key_indexes.sql',import.meta.url),'utf8'));check('003 foreign key indexes execute');
  for(const fixture of fixtures){const result=(await q('select private.calculate($1::jsonb) as result',[JSON.stringify(fixture)])).rows[0].result;assert.deepEqual(result,calculate(fixture));}check('128 JS / SQL scoring fixtures identical');
  const hps=(await q('select n,private.hp_at(n) hp from generate_series(1,9999) n')).rows;for(const {n,hp}of hps)assert.equal(Number(hp),hpAt(n));check('all 9,999 boss HP values match frontend');
  for(const input of [{...SAMPLE,entries:[]},{...SAMPLE,body_weight:0},{...SAMPLE,entries:[{code:'ohp',value:70,reps:1.5}]},{...SAMPLE,entries:[{code:'ohp',value:70},{code:'ohp',value:80}]}])await assert.rejects(q('select private.calculate($1::jsonb)',[JSON.stringify(input)]));check('invalid measurement input rejected');

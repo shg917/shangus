@@ -4,3 +4,5 @@ dist/
 !.env.example
 .qa/
 *.log
+/supabase/.branches/
+/supabase/.temp/

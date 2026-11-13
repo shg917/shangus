@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculate,SAMPLE,newPlayer,applyStats,hpAt,resolveAttack,rankProgress,compareProgress,periods} from '../public/core.js';
-import {DemoApi} from '../public/api.js';
+import {calculate,SAMPLE,newPlayer,applyStats,hpAt,resolveAttack,rankProgress,compareProgress,periods} from '../frontend/src/lib/core.js';
+import {DemoApi} from '../frontend/src/lib/api.js';
 import {fixtures} from './fixtures.mjs';
 test('128 diverse measurement fixtures keep missing axes distinct and stats bounded',()=>{
  for(const f of fixtures){const r=calculate(f);for(const v of Object.values(r.axes))assert.ok(v===null||(v>=0&&v<=100));assert.ok(r.stats.hits>=1&&r.stats.hits<=999);assert.ok(r.stats.crit>=0&&r.stats.crit<=50);assert.ok(Number.isFinite(r.stats.power));}
