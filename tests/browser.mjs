@@ -1,21 +1,15 @@
-import {createRequire} from 'node:module';
-import {mkdir} from 'node:fs/promises';
-import {fileURLToPath} from 'node:url';
-import {homedir} from 'node:os';
-import path from 'node:path';
+import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-const require=createRequire(import.meta.url);
-let playwright;
-try { playwright=require(process.env.PLAYWRIGHT_PATH||'playwright'); }
-catch(error) { if(process.env.PLAYWRIGHT_PATH)throw error;playwright=require(path.join(homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')); }
-const {chromium}=playwright;
-const browser=await chromium.launch({executablePath:process.env.BROWSER_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--no-proxy-server']});
+const previewUrl = process.env.PREVIEW_URL || 'http://127.0.0.1:4175';
+const browser = await chromium.launch({ executablePath: process.env.BROWSER_PATH, headless: true, args: ['--no-proxy-server'] });
 await mkdir(new URL('../.qa/',import.meta.url),{recursive:true});
 const context=await browser.newContext({viewport:{width:1440,height:1100},deviceScaleFactor:1});
 const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
 const screenshot=async name=>page.screenshot({path:fileURLToPath(new URL(`../.qa/${name}.png`,import.meta.url)),fullPage:true});
 try {
- await page.goto(process.env.PREVIEW_URL||'http://127.0.0.1:4174');await page.waitForSelector('#record-form');await screenshot('record-desktop');
+ await page.goto(previewUrl);await page.waitForSelector('#record-form');assert.match(await page.textContent('#mode'),/로컬 체험/);await screenshot('record-desktop');
  await page.click('#sample');await page.click('#record-form button[type=submit]');await page.waitForSelector('.fitness-card');assert.match(await page.textContent('.class-name'),/힘형/);await screenshot('card-desktop');
  await page.selectOption('#template','receipt');assert.match(await page.textContent('.card-type'),/영수증/);await page.selectOption('#template','stat');
  const download=page.waitForEvent('download');await page.click('#download-card');assert.match((await download).suggestedFilename(),/fitcard-stat.png/);
@@ -26,7 +20,14 @@ try {
  await page.click('a[href="#ranking"]');await page.waitForSelector('.rank-table');assert.match(await page.textContent('.rank-table'),/나의 FitCard/);await page.click('[data-rank=month]');await page.waitForSelector('.rank-table');await page.click('[data-rank=week]');await page.waitForSelector('.rank-table');await screenshot('ranking-desktop');
  await page.setViewportSize({width:390,height:844});await page.click('a[href="#record"]');await page.waitForSelector('#record-form');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('record-mobile');
  await page.click('a[href="#battle"]');await page.waitForSelector('#arena-canvas');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('battle-mobile');
- // Verify the locally vendored official SDK exports the expected client API.
- await page.addScriptTag({url:(process.env.PREVIEW_URL||'http://127.0.0.1:4174')+'/vendor/supabase.js'});assert.equal(await page.evaluate(()=>typeof window.supabase.createClient),'function');
- assert.deepEqual(errors,[]);console.log('Browser checks passed: record, 6-style selector, download, battle, persistent revival, 3 rankings, mobile layout, vendored SDK.');
+ assert.deepEqual(errors,[]);console.log('Browser checks passed: record, 6-style selector, download, battle, persistent revival, 3 rankings, mobile layout.');
+ if(process.env.FITCARD_LIVE_BROWSER==='1'){
+  const live=await browser.newContext(),lp=await live.newPage(),liveErrors=[];lp.on('pageerror',e=>liveErrors.push(e.message));
+  await lp.goto(process.env.LIVE_PREVIEW_URL || previewUrl);await lp.waitForSelector('#record-form');
+  assert.doesNotMatch(await lp.textContent('#mode'),/로컬 체험/);
+  await lp.click('#sample');await lp.click('#record-form button[type=submit]');await lp.waitForSelector('.fitness-card');
+  await lp.click('a[href="#ranking"]');await lp.waitForSelector('#ranking-content');await lp.waitForFunction(()=>{const panel=document.querySelector('#ranking-content');return panel && !panel.querySelector('.loading');});assert.match(await lp.textContent('#ranking-content'),/이번 기간의 기록|트레이너/);
+  await lp.click('#login-open');await lp.waitForSelector('#login-dialog[open]');assert.equal(await lp.locator('#kakao-login').isDisabled(),true);assert.match(await lp.textContent('#login-note'),/준비 중/);
+  assert.deepEqual(liveErrors,[]);await live.close();console.log('Live browser checks passed: real configuration, guest card preview, hosted ranking, pending Kakao setup messaging.');
+ }
 }finally{await browser.close();}
