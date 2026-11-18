@@ -1,10 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculate,SAMPLE,newPlayer,applyStats,hpAt,resolveAttack,rankProgress,compareProgress,periods} from '../frontend/src/lib/core.js';
+import {calculate,METRICS,SAMPLE,newPlayer,applyStats,hpAt,resolveAttack,rankProgress,compareProgress,periods} from '../frontend/src/lib/core.js';
 import {DemoApi} from '../frontend/src/lib/api.js';
 import {fixtures} from './fixtures.mjs';
-test('128 diverse measurement fixtures keep missing axes distinct and stats bounded',()=>{
+test('129 diverse measurement fixtures keep four axes distinct and stats bounded',()=>{
  for(const f of fixtures){const r=calculate(f);for(const v of Object.values(r.axes))assert.ok(v===null||(v>=0&&v<=100));assert.ok(r.stats.hits>=1&&r.stats.hits<=999);assert.ok(r.stats.crit>=0&&r.stats.crit<=50);assert.ok(Number.isFinite(r.stats.power));}
+});
+
+test('each of 14 metrics works alone with a per-event score and three unmeasured axes',()=>{
+ assert.equal(METRICS.length,14);
+ for(const metric of METRICS){
+  const value=metric.lift ? metric.ref*75 : metric.ref;
+  const result=calculate({...SAMPLE,entries:[{code:metric.code,value,reps:1}]});
+  assert.deepEqual(Object.keys(result.axes),['strength','endurance','agility','cardio']);
+  assert.equal(Object.values(result.axes).filter(value=>value===null).length,3);
+  assert.equal(result.entry_scores[metric.code],100);
+  assert.equal(result.axes[metric.axis],100);
+ }
+});
+
+test('scores use the strongest event in an axis; faster running scores higher',()=>{
+ const input={...SAMPLE,entries:[{code:'pushup',value:30,reps:1},{code:'pullup',value:15,reps:1},{code:'situp',value:60,reps:1}]};
+ const result=calculate(input);
+ assert.deepEqual(result.entry_scores,{pushup:50,pullup:75,situp:100});
+ assert.equal(result.axes.endurance,100);
+ for(const metric of METRICS.filter(metric=>metric.axis==='cardio')){
+  const score=value=>calculate({...SAMPLE,entries:[{code:metric.code,value,reps:1}]}).axes.cardio;
+  assert.equal(score(metric.zero),0);
+  assert.ok(score(metric.ref)>score(Math.round((metric.ref+metric.zero)/2)));
+ }
 });
 test('OHP 70 scores above deadlift 70; absent axes stay null',()=>{
  const f=code=>calculate({body_weight:75,reference_sex:'m',entries:[{code,value:70,reps:1}]});assert.ok(f('ohp').axes.strength>f('dead').axes.strength);assert.equal(f('ohp').axes.cardio,null);

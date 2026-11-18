@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
-import { SAMPLE } from '../frontend/src/lib/core.js';
+import { SAMPLE, METRICS, calculate } from '../frontend/src/lib/core.js';
 
 const { API_URL, PUBLISHABLE_KEY, SECRET_KEY } = process.env;
 assert.ok(API_URL && PUBLISHABLE_KEY && SECRET_KEY, 'Load the local Supabase stack environment.');
@@ -34,6 +34,12 @@ try {
   assert.ok((await rpc(anon, 'get_my_state')).error);
   assert.ok((await rpc(anon, 'claim_quest', { p_kind: 'login', p_request_id: id() })).error);
   const card = result(await rpc(a, 'save_measurement', { p_input: SAMPLE, p_request_id: id() }));
+  const allMetrics = { ...SAMPLE, entries: METRICS.map(metric => ({
+    code: metric.code, value: metric.lift ? metric.ref * SAMPLE.body_weight : metric.ref, reps: 1,
+  })) };
+  const allCard = result(await rpc(a, 'save_measurement', { p_input: allMetrics, p_request_id: id() }));
+  assert.deepEqual(allCard.result, calculate(allMetrics));
+  assert.equal(allCard.rules_version, 'v2');
   assert.deepEqual(result(await b.from('cards').select('id').eq('id', card.id)), []);
   assert.ok((await b.from('players').update({ tickets: 999 }).eq('user_id', user.id)).error);
 
