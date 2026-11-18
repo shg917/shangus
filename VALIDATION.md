@@ -1,8 +1,8 @@
 # 검증 범위
 
-- `pnpm test`: 기록 128개, 미측정 축, OHP와 데드리프트 비교, 전투·부활·랭킹 규칙.
-- `pnpm run test:db`: PGlite에서 마이그레이션 3개를 적용하고 SQL·프론트 계산 일치, 역할별 데이터 접근, 요청 재시도를 검사합니다.
-- `pnpm run test:browser`: 환경 변수를 비운 데모 서버에서 카드 생성·PNG 다운로드·전투·부활·랭킹·모바일 레이아웃을 검사합니다.
+- `pnpm test`: 기록 129개, 미측정 축, OHP와 데드리프트 비교, 전투·부활·랭킹 규칙.
+- `pnpm run test:db`: PGlite에서 v1 마이그레이션 3개 및 v2 업그레이드를 적용하고 SQL·프론트 계산 일치, 역할별 데이터 접근, 요청 재시도를 검사합니다.
+- `pnpm run test:browser`: 환경 변수를 비운 데모 서버에서 14종목 선택 입력·4축 스탯 카드·PNG 다운로드·전투·부활·랭킹·모바일 레이아웃을 검사합니다.
 - `pnpm run test:live`: 연결한 Supabase의 카카오 공급자 플래그, 공개 지표·랭킹, 비로그인 접근 차단을 검사합니다. 회원이나 기록을 만들지 않습니다.
 - `tests/supabase-integration.mjs`: 격리된 Supabase에서 두 계정을 만들고 실제 JWT·REST·RPC·Storage, 공격과 보상 동시 요청을 검사합니다. GitHub CI의 DB 단계에서 실행됩니다.
 

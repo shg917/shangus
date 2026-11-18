@@ -10,9 +10,23 @@ const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(
 const screenshot=async name=>page.screenshot({path:fileURLToPath(new URL(`../.qa/${name}.png`,import.meta.url)),fullPage:true});
 try {
  await page.goto(previewUrl);await page.waitForSelector('#record-form');assert.match(await page.textContent('#mode'),/로컬 체험/);await screenshot('record-desktop');
+ assert.equal(await page.locator('.metric').count(),14);
+ await page.fill('#metric-run3k','15:00');
+ await page.click('#record-form button[type=submit]');
+ await page.waitForSelector('.fitness-card');
+ assert.equal(await page.locator('.ability-row').filter({hasText:'미측정'}).count(),3);
+ assert.match(await page.textContent('.detail-window'),/15:00/);
+ await page.click('a[href="#record"]');await page.waitForSelector('#record-form');
  await page.click('#sample');await page.click('#record-form button[type=submit]');await page.waitForSelector('.fitness-card');assert.match(await page.textContent('.class-name'),/힘형/);await screenshot('card-desktop');
- await page.selectOption('#template','receipt');assert.match(await page.textContent('.card-type'),/영수증/);await page.selectOption('#template','stat');
- const download=page.waitForEvent('download');await page.click('#download-card');assert.match((await download).suggestedFilename(),/fitcard-stat.png/);
+ assert.equal(await page.locator('.ability-row').count(),4);
+ assert.equal(await page.locator('.stat-window').count(),3);
+ assert.match(await page.textContent('.ability-window'),/심폐지구력/);
+ assert.doesNotMatch(await page.textContent('.ability-window'),/코어/);
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await screenshot('card-mobile');
+ await page.setViewportSize({width:1440,height:1100});
+ const download=page.waitForEvent('download');await page.click('#download-card');const exported=await download;assert.match(exported.suggestedFilename(),/fitcard-stat.png/);await exported.saveAs(fileURLToPath(new URL('../.qa/card-export.png',import.meta.url)));
  await page.click('#go-battle');await page.waitForSelector('#arena-canvas');await page.click('#attack');await page.waitForFunction(()=>document.querySelector('#attack')?.textContent.includes('HIT'));
  const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('fitcard-app-v1')).player);await page.click('#attack');await page.waitForTimeout(1600);const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('fitcard-app-v1')).player);assert.ok(after.level>before.level);assert.ok(after.hp<before.hp);await screenshot('battle-desktop');
  await page.click('[data-claim=login]');await page.waitForFunction(()=>document.querySelector('[data-claim=login]')?.textContent==='받음');
@@ -20,7 +34,7 @@ try {
  await page.click('a[href="#ranking"]');await page.waitForSelector('.rank-table');assert.match(await page.textContent('.rank-table'),/나의 FitCard/);await page.click('[data-rank=month]');await page.waitForSelector('.rank-table');await page.click('[data-rank=week]');await page.waitForSelector('.rank-table');await screenshot('ranking-desktop');
  await page.setViewportSize({width:390,height:844});await page.click('a[href="#record"]');await page.waitForSelector('#record-form');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('record-mobile');
  await page.click('a[href="#battle"]');await page.waitForSelector('#arena-canvas');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await screenshot('battle-mobile');
- assert.deepEqual(errors,[]);console.log('Browser checks passed: record, 6-style selector, download, battle, persistent revival, 3 rankings, mobile layout.');
+ assert.deepEqual(errors,[]);console.log('Browser checks passed: 14 optional metrics, four-axis status card, download, battle, persistent revival, 3 rankings, mobile layout.');
  if(process.env.FITCARD_LIVE_BROWSER==='1'){
   const live=await browser.newContext(),lp=await live.newPage(),liveErrors=[];lp.on('pageerror',e=>liveErrors.push(e.message));
   await lp.goto(process.env.LIVE_PREVIEW_URL || previewUrl);await lp.waitForSelector('#record-form');
