@@ -7,7 +7,7 @@ import { calculate, newPlayer, validateRecord } from './lib/core.js'
 import { config } from './lib/config'
 import { emptyDraft, readDraft, writeDraft, oauthDraftKey, takeOAuthDraft, draftKey } from './lib/drafts'
 import { RecordForm } from './features/RecordForm'
-import { CardView, cardImage, type Template } from './features/CardView'
+import { CardView, cardImage } from './features/CardView'
 import { Battle } from './features/Battle'
 import { Rankings } from './features/Rankings'
 import type { Attack, Card, Period, RecordInput, Request, State } from './types'
@@ -47,7 +47,7 @@ export function App() {
   const [draft, setDraft] = useState(emptyDraft)
   const [pending, setPending] = useState(false)
   const [preview, setPreview] = useState<Card | null>(null)
-  const [template, setTemplate] = useState<Template>('stat')
+
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -249,13 +249,13 @@ export function App() {
       {error ? <section className="panel"><h1>연결을 확인해 주세요.</h1><p className="error">{error}</p><button onClick={() => location.reload()}>다시 시도</button></section>
       : !api || !state ? <p className="loading">불러오는 중…</p> : <>
         {route === 'record' && <RecordForm key={scope} draft={draft} change={changeDraft} submit={input => operation(() => submit(input))} busy={busy} saved={!!state.card} />}
-        {route === 'card' && <CardView card={card} profile={state.profile} template={template} select={setTemplate} pending={pending} logged={logged} busy={busy}
+        {route === 'card' && <CardView card={card} profile={state.profile} pending={pending} logged={logged} busy={busy}
           download={() => operation(async () => {
             if (!card) return
-            const url = URL.createObjectURL(await cardImage(card, state.profile.nickname, template))
+            const url = URL.createObjectURL(await cardImage(card, state.profile.nickname))
             const link = document.createElement('a')
             link.href = url
-            link.download = 'fitcard-' + template + '.png'
+            link.download = 'fitcard-stat.png'
             link.click()
             setTimeout(() => URL.revokeObjectURL(url), 2000)
           })}
@@ -263,7 +263,7 @@ export function App() {
             if (!logged) return showLogin()
             if (!card?.id) throw Error('카드를 계정에 먼저 저장해 주세요.')
             if (!(api instanceof SupabaseApi)) throw Error('공유 링크는 계정 연결 후 이용할 수 있습니다.')
-            const url = await api.uploadCard(await cardImage(card, state.profile.nickname, template), card.id)
+            const url = await api.uploadCard(await cardImage(card, state.profile.nickname), card.id)
             try { await navigator.clipboard.writeText(url); notify('1시간 동안 유효한 공유 링크를 복사했습니다.') }
             catch { window.prompt('1시간 동안 유효한 공유 링크', url) }
           })}
@@ -291,7 +291,7 @@ export function App() {
         {route === 'ranking' && <Rankings load={loadRanks} demo={api.mode === 'demo'} />}
       </>}
     </main>
-    <footer>FITCARD <span>자가 입력 기반 · 게임 점수 v1</span></footer>
+    <footer>FITCARD <span>자가 입력 기반 · 게임 점수 v2</span></footer>
     <div id="toast" className={notice ? 'show' : ''} role="status" aria-live="polite">{notice}</div>
     <dialog id="login-dialog" ref={dialog}>
       <form method="dialog"><button className="close" aria-label="닫기">×</button></form>

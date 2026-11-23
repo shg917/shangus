@@ -29,6 +29,20 @@ alter table private.click_players enable row level security;
 alter table private.click_rankings enable row level security;
 revoke all on private.click_players,private.click_rankings from public,anon,authenticated;
 
+-- Save the HP cap in the same transaction as the new card, including back-to-back saves.
+create function private.click_apply_card_stats() returns trigger
+language plpgsql set search_path='' as $$
+begin
+  update private.click_players
+     set hp=least(hp,(new.stats->>'max_hp')::bigint), version=version+1
+   where user_id=new.user_id;
+  return new;
+end $$;
+revoke all on function private.click_apply_card_stats() from public,anon,authenticated;
+create trigger click_apply_card_stats after update of stats on public.players
+  for each row when (old.stats is distinct from new.stats)
+  execute function private.click_apply_card_stats();
+
 create function private.click_now() returns bigint language sql volatile set search_path='' as $$
   select floor(extract(epoch from clock_timestamp())*1000)::bigint
 $$;

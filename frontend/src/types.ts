@@ -4,7 +4,7 @@ export type Stats = { power: number; hits: number; crit: number; max_hp: number 
 export type Card = {
   id?: string
   input: RecordInput
-  result: { axes: Record<string, number | null>; class: string; stats: Stats; version: string }
+  result: { axes: Record<string, number | null>; entry_scores?: Record<string, number>; class: string; stats: Stats; version: string }
   created_at: string
 }
 export type Player = {

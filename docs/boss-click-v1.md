@@ -1,6 +1,6 @@
 # 60초 보스 공략 초안
 
-기준 브랜치는 V.1.0.0이며 fix/card-design의 미병합 변경은 포함하지 않습니다.
+4축 카드의 근력·근지구력·순발력·심폐지구력 점수를 공격력·클릭당 타격 수·치명타 확률·최대 HP로 사용합니다.
 
 - 10명의 보스를 순서대로 공략합니다.
 - 도전 1회는 60초이며 보스는 2초마다 자동 반격합니다.
@@ -43,7 +43,7 @@ HP는 초기 게임 밸런스이며 실제 사용자의 클릭 속도와 기록 
 
 ## SQL
 
-supabase/migrations/20261123101731_timed_boss_combat.sql을 기존 마이그레이션 다음에 적용합니다.
+supabase/migrations/20261123101731_timed_boss_combat.sql을 4축 카드 마이그레이션(20261118081058_card_four_axes.sql) 다음에 적용합니다.
 신규 RPC는 get_click_state, start_click_play, click_boss, get_click_rankings입니다.
 원격 DB에는 이 작업 브랜치의 SQL을 자동 적용하지 않았습니다.
 프론트 배포 전에 해당 SQL을 검증·적용해야 합니다.

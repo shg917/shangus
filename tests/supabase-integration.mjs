@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
-import { SAMPLE } from '../frontend/src/lib/core.js';
+import { SAMPLE, METRICS, calculate } from '../frontend/src/lib/core.js';
 
 const { API_URL, PUBLISHABLE_KEY, SECRET_KEY } = process.env;
 assert.ok(API_URL && PUBLISHABLE_KEY && SECRET_KEY, 'Load the local Supabase stack environment.');
@@ -34,6 +34,12 @@ try {
   assert.ok((await rpc(anon, 'get_my_state')).error);
   assert.ok((await rpc(anon, 'claim_quest', { p_kind: 'login', p_request_id: id() })).error);
   const card = result(await rpc(a, 'save_measurement', { p_input: SAMPLE, p_request_id: id() }));
+  const allMetrics = { ...SAMPLE, entries: METRICS.map(metric => ({
+    code: metric.code, value: metric.lift ? metric.ref * SAMPLE.body_weight : metric.ref, reps: 1,
+  })) };
+  const allCard = result(await rpc(a, 'save_measurement', { p_input: allMetrics, p_request_id: id() }));
+  assert.deepEqual(allCard.result, calculate(allMetrics));
+  assert.equal(allCard.rules_version, 'v2');
   assert.deepEqual(result(await b.from('cards').select('id').eq('id', card.id)), []);
   assert.ok((await b.from('players').update({ tickets: 999 }).eq('user_id', user.id)).error);
 
@@ -59,6 +65,22 @@ try {
   assert.equal(clickState.player.click_count, 1);
   assert.equal(clickState.player.tickets, 0);
   assert.equal(duplicateClicks.filter(row => row.data.effective > 0).length, 1);
+  // Back-to-back card saves in an active run, without an intervening state read.
+  const strengthOnly = { ...SAMPLE, entries: [{ code: 'ohp', value: 50, reps: 1 }] };
+  const stronger = { ...SAMPLE, entries: [...strengthOnly.entries,
+    { code: 'pullup', value: 10, reps: 1 }, { code: 'run3k', value: 600, reps: 1 }] };
+  const lowCard = result(await rpc(a, 'save_measurement', { p_input: strengthOnly, p_request_id: id() }));
+  const newCard = result(await rpc(a, 'save_measurement', { p_input: stronger, p_request_id: id() }));
+  const updated = result(await rpc(a, 'get_click_state')).player;
+  assert.deepEqual(updated.stats, calculate(stronger).stats);
+  assert.ok(updated.hp > 0 && updated.hp <= lowCard.result.stats.max_hp);
+  assert.equal(updated.run_id, timedStart.run_id);
+  assert.equal(updated.ends_at, timedStart.ends_at);
+  assert.equal(updated.boss_hp, clickState.player.boss_hp);
+  const nextClick = result(await rpc(a, 'click_boss', {
+    p_request_id: id(), p_run_id: updated.run_id, p_total_clicks: 2,
+  }));
+  assert.equal(nextClick.effective, newCard.result.stats.power * newCard.result.stats.hits);
   assert.ok((await rpc(b, 'click_boss', {
     p_request_id: id(), p_run_id: timedStart.run_id, p_total_clicks: 2,
   })).error);
