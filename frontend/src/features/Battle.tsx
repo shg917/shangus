@@ -32,7 +32,7 @@ export function Battle({ api, state, scope, update, notify, logged, busy, attack
     <div className="intro"><div><h1>60초, 멈추지 않는 공격.</h1><p>클릭할 때마다 공격합니다. 보스는 2초마다 반격합니다.</p></div><span className="pill">보스 {player.level} / 10</span></div>
     <div className="grid battle-grid">
       <section className="panel arena-panel">
-        <div className="boss-heading"><div><div className="level">BOSS {player.level}</div><h2>{complete ? '10명 전원 격파' : boss.name}</h2></div><div className="battle-clock" aria-label="남은 시간">{player.status === 'active' ? timed.seconds : 60}<small>초</small></div></div>
+        <div className="boss-heading"><div><div className="level">BOSS {player.level}</div><h2>{complete ? '10명 전원 격파' : boss.name}</h2></div><div className="battle-clock" aria-label="남은 시간">{player.status === 'ready' ? 60 : player.status === 'active' ? timed.seconds : 0}<small>초</small></div></div>
         <div className="health-wrap"><Health value={player.boss_hp} max={hpAt(player.level)} /></div>
         <div className="arena">
           <canvas ref={canvas} id="arena-canvas" role="img" aria-label="헬스장에서 보스와 맞서는 아바타" />
