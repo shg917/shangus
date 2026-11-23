@@ -1,18 +1,25 @@
 // Provisional game calibration, NOT a population percentile or medical assessment.
 // SQL's private.calculate mirrors these rules; parity is tested in tests/database.mjs.
-export const VERSION = 'v1';
+export const VERSION = 'v2';
 export const CAP = 9999;
 export const METRICS = [
-  { code: 'ohp', label: '오버헤드 프레스', unit: 'kg', axis: 'strength', ref: 1.1, max: 250, lift: true },
-  { code: 'bench', label: '벤치프레스', unit: 'kg', axis: 'strength', ref: 1.7, max: 500, lift: true },
-  { code: 'squat', label: '스쿼트', unit: 'kg', axis: 'strength', ref: 2.5, max: 600, lift: true },
-  { code: 'dead', label: '데드리프트', unit: 'kg', axis: 'strength', ref: 2.8, max: 650, lift: true },
-  { code: 'pushup', label: '푸시업', unit: '회', axis: 'endurance', ref: 60, max: 500 },
-  { code: 'jump', label: '제자리멀리뛰기', unit: 'cm', axis: 'agility', ref: 280, max: 450 },
-  { code: 'run5k', label: '5km 달리기', unit: '초', axis: 'cardio', ref: 1080, max: 10800 },
-  { code: 'plank', label: '플랭크', unit: '초', axis: 'core', ref: 240, max: 3600 },
+  { code: 'ohp', label: 'O.H.P · 오버헤드 프레스', unit: 'kg', axis: 'strength', ref: 1.1, max: 250, min: .5, lift: true, zero: 0, protocol: '1회는 실제 1RM · 2~12회는 추정 1RM' },
+  { code: 'bench', label: 'B.P · 벤치프레스', unit: 'kg', axis: 'strength', ref: 1.7, max: 500, min: .5, lift: true, zero: 0, protocol: '1회는 실제 1RM · 2~12회는 추정 1RM' },
+  { code: 'dead', label: 'D.L · 데드리프트', unit: 'kg', axis: 'strength', ref: 2.8, max: 650, min: .5, lift: true, zero: 0, protocol: '1회는 실제 1RM · 2~12회는 추정 1RM' },
+  { code: 'squat', label: 'SQ · 스쿼트', unit: 'kg', axis: 'strength', ref: 2.5, max: 600, min: .5, lift: true, zero: 0, protocol: '1회는 실제 1RM · 2~12회는 추정 1RM' },
+  { code: 'pushup', label: '푸시업', unit: '회', axis: 'endurance', ref: 60, max: 500, min: 1, lift: false, zero: 0, protocol: '쉬지 않고 연속 수행한 횟수' },
+  { code: 'pullup', label: '풀업', unit: '회', axis: 'endurance', ref: 20, max: 200, min: 1, lift: false, zero: 0, protocol: '반동 없이 연속 수행한 횟수' },
+  { code: 'situp', label: '싯업', unit: '회', axis: 'endurance', ref: 60, max: 150, min: 1, lift: false, zero: 0, protocol: '1분 동안 수행한 횟수' },
+  { code: 'jump', label: '제자리 멀리뛰기', unit: 'cm', axis: 'agility', ref: 280, zero: 150, max: 450, min: 1, lift: false, protocol: '도약선부터 뒤쪽 발뒤꿈치까지' },
+  { code: 'vertical', label: '서전트 점프', unit: 'cm', axis: 'agility', ref: 75, zero: 20, max: 180, min: 1, lift: false, protocol: '점프 도달 높이 − 서서 뻗은 손 높이' },
+  { code: 'run3k', label: '3KM', unit: '초', axis: 'cardio', ref: 600, zero: 1260, max: 7200, min: 360, lift: false, protocol: '3km 완주 시간' },
+  { code: 'run5k', label: '5KM', unit: '초', axis: 'cardio', ref: 1080, zero: 2100, max: 10800, min: 600, lift: false, protocol: '5km 완주 시간' },
+  { code: 'run10k', label: '10KM', unit: '초', axis: 'cardio', ref: 2280, zero: 4800, max: 21600, min: 1200, lift: false, protocol: '10km 완주 시간' },
+  { code: 'half', label: '하프 마라톤', unit: '초', axis: 'cardio', ref: 5400, zero: 10800, max: 43200, min: 2700, lift: false, protocol: '21.0975km 완주 시간' },
+  { code: 'full', label: '풀 마라톤', unit: '초', axis: 'cardio', ref: 11400, zero: 21600, max: 86400, min: 6000, lift: false, protocol: '42.195km 완주 시간' },
 ];
-export const AXES = [['strength','근력'],['endurance','근지구력'],['agility','순발력'],['cardio','심폐'],['core','코어']];
+export const AXES = [['strength','근력'],['endurance','근지구력'],['agility','순발력'],['cardio','심폐지구력']];
+
 export const CLASSES = { strength: '힘형', agility: '민첩형', stamina: '스태미너형', unclassified: '탐색형' };
 export const BOSSES = [
   { from: 1, name: '프로틴 괴물', color: '#e2ae80', slogan: '한 스쿱만 더…' },
@@ -35,31 +42,43 @@ export function validateRecord(input) {
     const metric = METRICS.find(m=>m.code===e.code), value = Number(e.value), reps = e.reps == null ? 1 : Number(e.reps);
     if (!metric || seen.has(e.code)) throw Error('종목이 올바르지 않거나 중복되었습니다.');
     seen.add(e.code);
-    if (!Number.isFinite(value) || value <= 0 || value > metric.max || (e.code==='run5k' && value < 600)) throw Error(`${metric.label} 입력 범위를 확인해 주세요.`);
+    if (!Number.isFinite(value) || value < metric.min || value > metric.max || (!metric.lift && !Number.isInteger(value))) throw Error(`${metric.label} 입력 범위를 확인해 주세요.`);
     if (!Number.isInteger(reps) || reps < 1 || reps > 12 || (!metric.lift && reps !== 1)) throw Error('중량 종목 반복 횟수는 1~12회로 입력해 주세요.');
     return { code:e.code, value, reps };
   });
   return { body_weight:weight, reference_sex:input.reference_sex, entries };
 }
 
+export function metricScore(entry, input) {
+  const metric = METRICS.find(item => item.code === entry.code);
+  if (!metric) throw Error('지원하지 않는 종목입니다.');
+  let score;
+  if (metric.lift) {
+    const estimated = entry.value * (entry.reps === 1 ? 1 : 1 + entry.reps / 30);
+    score = estimated / input.body_weight / (metric.ref * (input.reference_sex === 'f' ? .62 : 1)) * 100;
+  } else if (metric.axis === 'cardio') {
+    score = (metric.zero - entry.value) / (metric.zero - metric.ref) * 100;
+  } else {
+    score = (entry.value - metric.zero) / (metric.ref - metric.zero) * 100;
+  }
+  return Math.round(clamp(score, 0, 100) * 10) / 10;
+}
+
 export function calculate(raw) {
-  const input=validateRecord(raw), axes=Object.fromEntries(AXES.map(([key])=>[key,null]));
-  for(const e of input.entries) {
-    const m=METRICS.find(m=>m.code===e.code);
-    let score;
-    if(m.lift) {
-      const estimated=e.value*(e.reps===1 ? 1 : 1+e.reps/30);
-      score=estimated/input.body_weight/(m.ref*(input.reference_sex==='f'?.62:1))*100;
-    } else if(e.code==='jump') score=(e.value-150)/130*100;
-    else if(e.code==='run5k') score=(2100-e.value)/1020*100;
-    else score=e.value/m.ref*100;
-    axes[m.axis]=Math.max(axes[m.axis]??0,Math.round(clamp(score,0,100)*10)/10);
+  const input = validateRecord(raw);
+  const axes = Object.fromEntries(AXES.map(([key]) => [key, null]));
+  const entry_scores = {};
+  for (const entry of input.entries) {
+    const metric = METRICS.find(item => item.code === entry.code);
+    const score = metricScore(entry, input);
+    entry_scores[entry.code] = score;
+    axes[metric.axis] = Math.max(axes[metric.axis] ?? 0, score);
   }
   let cls='unclassified', best=-1;
   for(const [key,value] of [['strength',axes.strength],['agility',axes.agility],['stamina',Math.max(axes.endurance??-1,axes.cardio??-1)]]) {
     if(value!=null && value>best) { cls=key; best=value; }
   }
-  return { axes, class:cls, version:VERSION, measured:input.entries.length,
+  return { axes, entry_scores, class:cls, version:VERSION, measured:input.entries.length,
     stats: { power:Math.round(15+(axes.strength??0)*6), hits:1+Math.floor(998*((axes.endurance??0)/100)**3), crit:Math.round((axes.agility??0)*.5*10)/10, max_hp:Math.round(180+(axes.cardio??0)*12) } };
 }
 
