@@ -11,7 +11,7 @@ function combatRows(card: Card) {
   const stats = card.result.stats
   return [
     ['기본 공격력', stats.power.toLocaleString('ko-KR')],
-    ['턴당 타격 수', stats.hits.toLocaleString('ko-KR') + ' 타'],
+    ['클릭당 타격 수', stats.hits.toLocaleString('ko-KR') + ' 타'],
     ['치명타 확률', stats.crit + '%'],
     ['최대 HP', stats.max_hp.toLocaleString('ko-KR')],
   ]

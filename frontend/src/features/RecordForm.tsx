@@ -63,8 +63,8 @@ export function RecordForm({ draft, change, submit, busy, saved }: {
       </form>
       <aside className="stack">
         <section className="panel"><h2>4가지 능력으로<br />만드는 나의 카드</h2>
-          <ol className="steps">{[['근력', '기본 공격력'], ['근지구력', '턴당 타격 수'], ['순발력', '치명타 확률'], ['심폐지구력', '최대 HP']].map(([axis, value]) => <li key={axis}><div><strong>{axis}</strong>{value}</div></li>)}</ol>
-          <p className="muted">입력하지 않은 축은 미측정으로 표시합니다. 전투는 해당 축의 기본 능력치로 시작합니다.</p>
+          <ol className="steps">{[['근력', '기본 공격력'], ['근지구력', '클릭당 타격 수'], ['순발력', '치명타 확률'], ['심폐지구력', '최대 HP']].map(([axis, value]) => <li key={axis}><div><strong>{axis}</strong>{value}</div></li>)}</ol>
+          <p className="muted">입력하지 않은 축은 미측정으로 표시합니다. 미측정 능력에는 전투 기본값이 적용됩니다. 10명의 보스에게 60초 동안 클릭으로 도전할 수 있어요.</p>
         </section>
         <section className="panel"><h3>측정 기준</h3><p className="muted">푸시업·풀업은 연속 수행, 싯업은 1분 기록을 사용합니다. 달리기는 해당 거리를 완주한 시간을 넣어주세요.</p>
           <div className="callout">O.H.P와 D.L은 같은 무게도 다르게 환산됩니다. 종목을 추가하면 각 종목의 점수를 비교할 수 있어요.</div>

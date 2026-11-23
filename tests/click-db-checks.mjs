@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import { readFile, readdir } from 'node:fs/promises';
+import { BOSSES } from '../frontend/src/lib/click-combat.js';
+
+export async function checkClickDatabase({db, q, rpc, as, admin, check, uid, other, SAMPLE}) {
+  await db.exec('reset role');
+  const names=await readdir(new URL('../supabase/migrations/',import.meta.url));
+  const filename=names.find(name=>name.endsWith('_timed_boss_combat.sql'));
+  await db.exec(await readFile(new URL('../supabase/migrations/'+filename,import.meta.url),'utf8'));
+  for(const boss of BOSSES)assert.equal(Number((await q('select private.click_hp($1) hp',[boss.from])).rows[0].hp),boss.hp);
+  assert.equal((await q("select status from public.players where user_id=$1",[uid])).rows[0].status,'complete');
+  check('timed boss migration keeps legacy progress and ten HP definitions match');
+  await as(other);
+  let state=await rpc('get_click_state');assert.equal(state.player.level,1);
+  await assert.rejects(rpc('start_click_play',['daily',crypto.randomUUID()]));
+  await rpc('save_measurement',[JSON.stringify(SAMPLE),crypto.randomUUID()]);
+  await admin("update public.players set stats='{\"power\":1000,\"hits\":1,\"crit\":0,\"max_hp\":10000}' where user_id=$1",[other]);
+  await as(other);
+  const startId=crypto.randomUUID();
+  const run=await rpc('start_click_play',['daily',startId]);assert.deepEqual(run,await rpc('start_click_play',['daily',startId]));
+  assert.equal(run.ends_at-run.started_at,60000);
+  await assert.rejects(rpc('start_click_play',['daily',crypto.randomUUID()]));
+  const request=crypto.randomUUID();
+  const result=await rpc('click_boss',[request,run.run_id,10]);
+  assert.equal(result.effective,10000);assert.equal(result.player.boss_hp,90000);
+  assert.deepEqual(result,await rpc('click_boss',[request,run.run_id,10]));
+  const duplicate=await rpc('click_boss',[crypto.randomUUID(),run.run_id,10]);assert.equal(duplicate.effective,0);
+  assert.equal((await rpc('click_boss',[crypto.randomUUID(),run.run_id,5])).effective,0);
+  await assert.rejects(rpc('click_boss',[crypto.randomUUID(),run.run_id,1000000]));
+  await assert.rejects(rpc('click_boss',[crypto.randomUUID(),crypto.randomUUID(),20]));
+  check('timed clicks are cumulative and idempotent; forged counts and run IDs rejected');
+
+  await admin('update private.click_players set counter_at=private.click_now()-4100 where user_id=$1',[other]);
+  await as(other);state=await rpc('get_click_state');assert.equal(state.player.hp,9968);
+  const hp=state.player.hp;
+  await rpc('click_boss',[crypto.randomUUID(),run.run_id,11]);
+  assert.equal((await rpc('get_click_state')).player.hp,hp);
+  check('two-second counters settle with no clicks; clicking does not cause an extra counter');
+
+  await admin('update private.click_players set ends_at=private.click_now()-1 where user_id=$1',[other]);
+  await as(other);
+  const late=await rpc('click_boss',[crypto.randomUUID(),run.run_id,12]);
+  assert.equal(late.effective,0);assert.equal(late.player.status,'dead');assert.equal(late.player.end_reason,'timeout');
+  await rpc('claim_quest',['login',crypto.randomUUID()]);
+  const reviveId=crypto.randomUUID();
+  const revived=await rpc('start_click_play',['ticket',reviveId]);
+  assert.deepEqual(revived,await rpc('start_click_play',['ticket',reviveId]));
+  assert.equal(revived.boss_hp,late.player.boss_hp);assert.equal(revived.hp,10000);
+  assert.equal((await rpc('get_click_state')).player.tickets,0);
+  await assert.rejects(rpc('click_boss',[crypto.randomUUID(),run.run_id,13]));
+  check('timeout commits; one-ticket revival renews the timer and preserves exact boss HP');
+
+  await admin('update private.click_players set hp=1,counter_at=private.click_now()-2100 where user_id=$1',[other]);
+  await as(other);
+  const lethal=await rpc('click_boss',[crypto.randomUUID(),revived.run_id,1]);
+  assert.equal(lethal.effective,0);assert.equal(lethal.player.status,'dead');
+  await assert.rejects(rpc('start_click_play',['ticket',crypto.randomUUID()]));
+  await as(null);
+  const ranks=await rpc('get_click_rankings',['year',100]);
+  assert.ok(ranks.length>0);assert.ok(!('user_id' in ranks[0]));
+  await assert.rejects(rpc('get_click_state'));
+  await assert.rejects(rpc('click_boss',[crypto.randomUUID(),revived.run_id,1]));
+  await assert.rejects(q('select * from private.click_players'));
+  check('lethal timed counter precedes attacks; anonymous RPCs and private progress remain restricted');
+  await admin("update private.click_players set level=10,cleared=9,boss_hp=1,hp=10000,status='active',click_count=0,counter_at=private.click_now(),ends_at=private.click_now()+60000,started_at=private.click_now() where user_id=$1",[other]);
+  await as(other);
+  const final=await rpc('click_boss',[crypto.randomUUID(),revived.run_id,1]);
+  assert.equal(final.player.cleared,10);assert.equal(final.effective,1);assert.equal(final.player.status,'complete');
+  assert.equal((await rpc('get_click_rankings',['year',100]))[0].damage,0);
+  check('timed mode caps at ten bosses and ranks only effective progress');
+}

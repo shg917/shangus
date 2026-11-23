@@ -10,8 +10,10 @@ export type Card = {
 export type Player = {
   level: number; cleared: number; boss_hp: number; hp: number; stats: Stats
   status: string; version: number; tickets: number
+  run_id: string | null; started_at: number; ends_at: number; counter_at: number; click_count: number; end_reason: string | null
 }
 export type State = {
+  server_now?: number
   player: Player; card: Card | null; profile: { nickname: string; avatar: string }
   daily_available: boolean; claimed: string[]; has_workout: boolean
   achievements: { label: string }[]

@@ -1,4 +1,4 @@
-import {bossAt} from './core.js';
+import {bossAt} from './click-combat.js';
 export function drawArena(canvas,level,avatar='a') {
  const ctx=canvas.getContext('2d'); if(!ctx)return;
  const ratio=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,canvas.clientWidth*ratio);canvas.height=Math.max(1,canvas.clientHeight*ratio);
@@ -37,5 +37,5 @@ export function drawArena(canvas,level,avatar='a') {
  shape([[-23,-104],[-40,-80],[-30,-58],[-20,-72]],'#cca384');shape([[23,-106],[40,-90],[57,-112],[66,-105],[44,-69],[27,-78]],'#cca384');
  ellipse(0,-133,20,24,'#dbb08b');shape([[-21,-139],[-12,-159],[13,-156],[23,-139],[8,-142],[-7,-136]],'#263021');
  ctx.save();ctx.translate(61,-112);ctx.rotate(-.35);ctx.fillStyle='#9fae86';ctx.fillRect(-30,-4,60,8);ctx.fillStyle='#2e3a23';ctx.fillRect(-32,-18,14,36);ctx.fillRect(18,-18,14,36);ctx.restore();ctx.restore();
- ctx.font='12px sans-serif';ctx.fillStyle='#c7d4ad';ctx.fillText('나의 아바타',113,377);ctx.fillStyle='#dce9c3';ctx.fillText(bossAt(level).slogan,465,377);
+ ctx.font='12px sans-serif';ctx.fillStyle='#c7d4ad';ctx.fillText('나의 아바타',113,377);ctx.fillStyle='#dce9c3';ctx.fillText(bossAt(level).name,465,377);
 }

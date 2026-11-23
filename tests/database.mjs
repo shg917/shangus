@@ -1,3 +1,4 @@
+import { checkClickDatabase } from './click-db-checks.mjs';
 import {PGlite} from '@electric-sql/pglite';
 import {readFile,readdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -52,5 +53,6 @@ try {
  await admin("update private.rankings set period_start='2000-01-01' where kind='year'");await as(null);assert.equal((await rpc('get_rankings',['year',100])).length,0);check('old annual rankings excluded without deleting progress');
  await admin("update public.players set level=9999,cleared=9998,boss_hp=1,hp=50,status='active' where user_id=$1",[uid]);await admin("update private.battle_events set created_at=now()-interval '2 seconds'");await as(uid);state=await rpc('get_my_state');const end=await rpc('attack_boss',[crypto.randomUUID(),state.player.version]);assert.equal(end.player.cleared,9999);assert.equal(end.player.status,'complete');assert.equal(end.counter,0);assert.equal(end.effective,1);check('final boss cap and effective overkill handling');
  await admin('select 1');const dates=(await q("select private.period('year')::text y,private.period('month')::text m,private.period('week')::text w,private.today()::text d")).rows[0];const p=periods();assert.deepEqual(dates,{y:p.year,m:p.month,w:p.week,d:p.day});check('SQL period boundaries match Korea time');
+ await checkClickDatabase({db,q,rpc,as,admin,check,uid,other,SAMPLE});
  console.log(`\n${assertions} database checks passed. Hosted OAuth / Storage service still require integration verification.`);
 } catch(error) {console.error('DATABASE TEST FAILED:',error.message,error.detail||'',error.where||'');process.exitCode=1;} finally {await db.close();}
