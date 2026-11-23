@@ -52,7 +52,7 @@ export function RecordForm({ draft, change, submit, busy, saved }: {
         <section className="panel"><h2>기록으로 시작하는<br />나의 성장</h2><ol className="steps">
           <li><div><strong>나를 표현하는 카드</strong>종목별 기준으로 계산한 5축 프로필</div></li>
           <li><div><strong>기록이 전투 능력치로</strong>공격력 · 타격 수 · 치명타 · HP</div></li>
-          <li><div><strong>9,999층까지 도전</strong>초과 피해는 다음 보스까지 이어져요</div></li>
+          <li><div><strong>10명의 보스에 도전</strong>60초 동안 클릭해서 공격해요</div></li>
         </ol></section>
         <section className="panel"><h3>더 강해졌다면, 바로 반영.</h3>
           <p className="muted">새 기록은 진행 중인 전투에도 적용됩니다. 최대 HP가 늘어도 현재 HP는 자동 회복되지 않아요.</p>

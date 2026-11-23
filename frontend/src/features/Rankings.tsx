@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { CAP, hpAt, periods } from '../lib/core.js'
+import { periods } from '../lib/core.js'
+import { CAP, hpAt } from '../lib/click-combat.js'
 import { format } from './Stats'
 import type { Period, Rank } from '../types'
 

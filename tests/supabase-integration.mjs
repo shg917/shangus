@@ -49,6 +49,25 @@ try {
   assert.equal(after.player.version, before.player.version + 1);
   for (const [key, value] of Object.entries(accepted[0].data.player)) { assert.deepEqual(after.player[key], value, key); }
 
+  const timedStart = result(await rpc(a, 'start_click_play', { p_kind: 'ticket', p_request_id: id() }));
+  assert.equal(timedStart.ends_at - timedStart.started_at, 60000);
+  const duplicateClicks = await Promise.all([1,1].map(count => rpc(a, 'click_boss', {
+    p_request_id: id(), p_run_id: timedStart.run_id, p_total_clicks: count,
+  })));
+  duplicateClicks.forEach(result);
+  const clickState = result(await rpc(a, 'get_click_state'));
+  assert.equal(clickState.player.click_count, 1);
+  assert.equal(clickState.player.tickets, 0);
+  assert.equal(duplicateClicks.filter(row => row.data.effective > 0).length, 1);
+  assert.ok((await rpc(b, 'click_boss', {
+    p_request_id: id(), p_run_id: timedStart.run_id, p_total_clicks: 2,
+  })).error);
+  assert.ok((await rpc(anon, 'get_click_state')).error);
+  for(const kind of ['year','month','week']) {
+    const timedRanks = result(await rpc(anon, 'get_click_rankings', { p_kind: kind, p_limit: 100 }));
+    assert.ok(timedRanks.length > 0);
+    assert.ok(timedRanks.every(row => !('user_id' in row)));
+  }
   result(await a.storage.from('cards').upload(file, png, { contentType: 'image/png' }));
   assert.ok((await b.storage.from('cards').download(file)).error);
   assert.ok((await b.storage.from('cards').createSignedUrl(file, 60)).error);

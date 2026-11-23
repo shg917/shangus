@@ -1,4 +1,4 @@
-import {bossAt} from './core.js';
+import {bossAt} from './click-combat.js';
 export function drawArena(canvas,level,avatar='a') {
  const ctx=canvas.getContext('2d'); if(!ctx)return;
  const ratio=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,canvas.clientWidth*ratio);canvas.height=Math.max(1,canvas.clientHeight*ratio);

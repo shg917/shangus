@@ -37,13 +37,14 @@ export class SupabaseApi {
     return this.kakaoEnabled;
   }
   async rpc(name,args={}) { const {data,error}=await this.client.rpc(name,args); if(error) throw Error(error.message); return data; }
-  state() { return this.rpc('get_my_state'); }
+  state() { return this.rpc('get_click_state'); }
   saveRecord(input,id) { return this.rpc('save_measurement',{p_input:input,p_request_id:id}); }
-  start(kind,id) { return this.rpc('start_play',{p_kind:kind,p_request_id:id}); }
+  start(kind,id) { return this.rpc('start_click_play',{p_kind:kind,p_request_id:id}); }
   attack(id,version) { return this.rpc('attack_boss',{p_request_id:id,p_expected_version:version}); }
   claim(kind,id) { return this.rpc('claim_quest',{p_kind:kind,p_request_id:id}); }
   profile(nickname,avatar) { return this.rpc('set_profile',{p_nickname:nickname,p_avatar:avatar}); }
-  rankings(kind) { return this.rpc('get_rankings',{p_kind:kind,p_limit:100}); }
+  rankings(kind) { return this.rpc('get_click_rankings',{p_kind:kind,p_limit:100}); }
+  clickAttack(id,runId,totalClicks) { return this.rpc('click_boss',{p_request_id:id,p_run_id:runId,p_total_clicks:totalClicks}); }
   async login() { if(await this.checkKakao()===false)throw Error('카카오 로그인을 준비 중입니다. 잠시 후 다시 이용해 주세요.');const {error}=await this.client.auth.signInWithOAuth({provider:'kakao',options:{redirectTo:this.config.redirectUrl||`${location.origin}/`}}); if(error) throw error; }
   async logout() { const {error}=await this.client.auth.signOut(); if(error) throw error; this.user=null; }
   async uploadCard(blob,cardId) {
@@ -56,7 +57,7 @@ export class SupabaseApi {
 }
 
 export async function createApi(config) {
-  if(!config.supabaseUrl&&!config.supabasePublishableKey) return new DemoApi();
+  if(!config.supabaseUrl&&!config.supabasePublishableKey) { const {ClickDemoApi}=await import('./click-demo.js'); return new ClickDemoApi(); }
   if(!config.supabaseUrl||!config.supabasePublishableKey) throw Error('Supabase URL과 공개 키를 모두 설정해야 합니다.');
   if(!config.supabasePublishableKey.startsWith('sb_publishable_')) throw Error('Supabase 공개 키(sb_publishable_…)가 필요합니다.');
   const api=new SupabaseApi(createClient(config.supabaseUrl,config.supabasePublishableKey,{auth:{flowType:'pkce',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}}),config);

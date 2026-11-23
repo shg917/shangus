@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "test": "node --test tests/core.test.mjs",
+    "test": "node --test tests/core.test.mjs tests/click-combat.test.mjs",
     "test:db": "node tests/database.mjs",
     "test:browser": "node tests/browser.mjs",
     "test:live": "node --env-file-if-exists=.env.local tests/live-smoke.mjs",

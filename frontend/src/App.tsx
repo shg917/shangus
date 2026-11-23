@@ -1,3 +1,5 @@
+import { ClickDemoApi } from './lib/click-demo.js'
+import { newClickPlayer } from './lib/click-combat.js'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DemoApi, SupabaseApi, createApi } from './lib/api.js'
@@ -10,7 +12,7 @@ import { Battle } from './features/Battle'
 import { Rankings } from './features/Rankings'
 import type { Attack, Card, Period, RecordInput, Request, State } from './types'
 
-type Api = DemoApi | SupabaseApi
+type Api = ClickDemoApi | SupabaseApi
 type Pending = Request & { id: string; version: number; scope: string }
 const sections = { record: '기록 입력', card: '나의 카드', battle: '보스 도전', ranking: '랭킹' }
 type Route = keyof typeof sections
@@ -22,7 +24,7 @@ function getRoute(): Route {
 
 function guest(): State {
   return {
-    player: newPlayer(), card: null, profile: { nickname: '나의 FitCard', avatar: 'a' },
+    player: { ...newPlayer(), ...newClickPlayer() }, card: null, profile: { nickname: '나의 FitCard', avatar: 'a' },
     daily_available: true, claimed: [], has_workout: false, achievements: [],
   }
 }
@@ -50,7 +52,7 @@ export function App() {
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [loginBusy, setLoginBusy] = useState(false)
-  const [hit, setHit] = useState<Attack | null>(null)
+
   const dialog = useRef<HTMLDialogElement>(null)
   const inFlight = useRef(false)
   const latestScope = useRef('guest')
@@ -68,7 +70,7 @@ export function App() {
     setDraft(saved.input)
     setPending(false)
     setPreview(null)
-    setHit(null)
+
     if (saved.pending) {
       try {
         setPreview(previewCard(validateRecord(saved.input)))
@@ -100,7 +102,7 @@ export function App() {
         const version = ++refreshVersion
         const current = userScope(client)
         const data = current === 'guest' ? guest() : await client.state()
-        if (alive && version === refreshVersion && current === latestScope.current) setState(data)
+        if (alive && version === refreshVersion && current === latestScope.current) setState(current => current && (current.server_now ?? 0) > (data.server_now ?? 0) ? current : data)
       }
       if (client instanceof SupabaseApi) {
         const { data } = client.client.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
@@ -134,7 +136,7 @@ export function App() {
       if (document.hidden || inFlight.current || latestScope.current === 'guest') return
       const current = latestScope.current
       api.state().then(data => {
-        if (current === latestScope.current && !inFlight.current) setState(data)
+        if (current === latestScope.current && !inFlight.current) setState(current => current && (current.server_now ?? 0) > (data.server_now ?? 0) ? current : data)
       }).catch(error => notify(errorText(error)))
     }
     const syncDemo = (event: StorageEvent) => { if (event.key === 'fitcard-app-v1') refresh() }
@@ -178,7 +180,7 @@ export function App() {
       try {
         if (current === latestScope.current && current !== 'guest') {
           const fresh = await api.state()
-          if (current === latestScope.current) setState(fresh)
+          if (current === latestScope.current) setState(current => current && (current.server_now ?? 0) > (fresh.server_now ?? 0) ? current : fresh)
         }
       } catch (error) { notify(errorText(error)) }
       inFlight.current = false
@@ -276,7 +278,7 @@ export function App() {
             notify('프로필을 저장했습니다.')
           })}
         />}
-        {route === 'battle' && <Battle state={state} logged={logged} mode={api.mode} busy={busy} hit={hit}
+        {route === 'battle' && <Battle api={api} state={state} scope={scope} logged={logged} busy={busy} update={next => setState(current => !current || next.player.version >= current.player.version ? next : current)} notify={notify}
           attack={() => operation(async () => {
             if (!logged) return showLogin()
             if (!state.card) { location.hash = 'record'; return }
@@ -284,11 +286,6 @@ export function App() {
               await mutate({ action: 'start', payload: { kind: state.daily_available ? 'daily' : 'ticket' } })
               return
             }
-            const result: Attack = await mutate({ action: 'attack' })
-            setState({ ...state, player: result.player })
-            setHit(result)
-            notify(result.kills ? `${result.kills}레벨 돌파!` : '공격을 완료했습니다.')
-            setTimeout(() => setHit(current => current === result ? null : current), 650)
           })}
           claim={kind => operation(async () => { await mutate({ action: 'claim', payload: { kind } }); notify('부활권 1장을 받았습니다.') })} />}
         {route === 'ranking' && <Rankings load={loadRanks} demo={api.mode === 'demo'} />}
